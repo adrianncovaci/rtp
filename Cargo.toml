@@ -8,9 +8,9 @@ edition = "2018"
 name = "actor_framework"
 path = "src/main.rs"
 
-[lib]
-name = "actor_framework"
-path = "src/lib.rs"
+#[lib]
+#name = "actor_framework"
+#path = "src/lib.rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -24,9 +24,10 @@ fnv = "1.0.7"
 slab = "0.4.2"
 anyhow = { version = "1.0.37", optional = true }
 eyre = { version = "0.6.5", optional = true }
+reqwest = "0.11.1"
+serde = { version = "1.0", features = ["derive"] }
 
 [features]
 runtime-tokio = ["tokio"]
 runtime-async-std = ["async-std"]
-
-default = ["runtime-async-std", "anyhow"]
+default = ["runtime-tokio", "anyhow"]
