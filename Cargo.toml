@@ -1,0 +1,32 @@
+[package]
+name = "actor_framework"
+version = "0.1.0"
+authors = ["Adrian Covaci <adrian.covaci@amdaris.com>"]
+edition = "2018"
+
+[[bin]]
+name = "actor_framework"
+path = "src/main.rs"
+
+[lib]
+name = "actor_framework"
+path = "src/lib.rs"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+futures = "0.3.8"
+async-trait = "0.1.42"
+async-std = { version = "1.8.0", features = ["attributes"], optional = true }
+tokio = { version = "1.0.1", features = ["rt-multi-thread", "macros", "time"], optional = true }
+once_cell = "1.5.2"
+fnv = "1.0.7"
+slab = "0.4.2"
+anyhow = { version = "1.0.37", optional = true }
+eyre = { version = "0.6.5", optional = true }
+
+[features]
+runtime-tokio = ["tokio"]
+runtime-async-std = ["async-std"]
+
+default = ["runtime-async-std", "anyhow"]
