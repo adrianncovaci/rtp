@@ -1,10 +1,5 @@
-use serde::{Deserialize, Serialize};
-
-#[derive(Debug, Serialize, Deserialize, Clone, Debug)]
-pub struct TweetText {
-    #[serde(Default)]
-    data: String;
+#[derive(Debug, Clone)]
+pub enum ResponseMessage {
+    TweetText(String),
+    Halt,
 }
-
-#[derive(Debug, Serialize, Deserialize, Clone, Debug)]
-pub struct Halt; 
