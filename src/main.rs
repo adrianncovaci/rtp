@@ -39,7 +39,7 @@ impl Handler<InitializeWorkers> for ActorSpawner {
 
         let child_actors = child_actors_futures
             .into_iter()
-            .map(|actor| async { actor.start().await.unwrap() });
+            .map(|actor| async { Supervisor::start(move || actor.clone()).await.unwrap() });
         let child_actors = futures::future::join_all(child_actors).await;
         self.childs = child_actors;
     }
@@ -49,6 +49,8 @@ struct InitializeWorkers;
 impl Message for InitializeWorkers {
     type Result = ();
 }
+
+#[derive(Clone)]
 struct LeActeur {
     id: u32,
     msg_producer: Addr<MessageProducer>,
@@ -69,7 +71,16 @@ impl Actor for LeActeur {
 #[async_trait::async_trait]
 impl Handler<TweetMessage> for LeActeur {
     async fn handle(&mut self, ctx: &mut Context<Self>, msg: TweetMessage) {
-        println!("leacteur with id {} got {:?}", self.id, msg);
+        match msg {
+            TweetMessage::TweetText(text) => {
+                println!("leacteur with id {} got \"{}\"", self.id, text);
+            }
+            TweetMessage::Halt => {
+                println!("Killing leacteur {}", self.id);
+                ctx.stop(None);
+                std::thread::sleep(Duration::from_millis(50));
+            }
+        }
     }
 }
 
@@ -118,12 +129,16 @@ impl Message for HandleMessages {
 #[async_trait::async_trait]
 impl Handler<HandleMessages> for MessageProducer {
     async fn handle(&mut self, ctx: &mut Context<Self>, msg: HandleMessages) {
-        let msg = TweetMessage::TweetText(String::from("derp"));
-        let _: Vec<_> = self
-            .subscribers
-            .iter()
-            .map(|sub| sub.send(msg.clone()))
-            .collect();
+        let mut res = reqwest::get("http://localhost:4000/tweets/1")
+            .await
+            .unwrap();
+        let mut index = 0;
+
+        while let Some(item) = res.chunk().await.unwrap() {
+            let response = get_message_from_chunk(item);
+            self.subscribers[index].send(response.clone()).unwrap();
+            index = (index + 1) % self.subscribers.len();
+        }
     }
 }
 
@@ -140,21 +155,6 @@ fn get_message_from_chunk(bytes: Bytes) -> TweetMessage {
 
 #[tokio::main]
 async fn main() {
-    // let mut res = reqwest::get("http://localhost:4000/tweets/1")
-    //     .await
-    //     .unwrap();
-
-    // let mut i = 0;
-    // 'looper: loop {
-    //     while let Some(item) = res.chunk().await.unwrap() {
-    //         let response = get_message_from_chunk(item);
-    //         println!("{:?}", response);
-    //         i += 1;
-    //         if i >= 10 {
-    //             break 'looper;
-    //         }
-    //     }
-    // }
     let parent = ActorSpawner::new().await.start().await.unwrap();
     parent.wait_for_stop().await;
 }
