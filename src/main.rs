@@ -1,9 +1,18 @@
-use std::time::Duration;
+use std::{collections::HashMap, thread, time::Duration};
 
 use actor_framework::Message;
 use actor_framework::*;
+use async_once::AsyncOnce;
 use bytes::Bytes;
+use lazy_static::lazy_static;
 use messages::TweetMessage;
+
+lazy_static! {
+    #[derive(Debug)]
+    static ref EMOTIONS_DICTIONARY: AsyncOnce<HashMap<String, i8>> = AsyncOnce::new(async {
+        get_emotions_sets().await
+    });
+}
 
 struct ActorSpawner {
     childs: Vec<Addr<LeActeur>>,
@@ -153,8 +162,29 @@ fn get_message_from_chunk(bytes: Bytes) -> TweetMessage {
     TweetMessage::Halt
 }
 
+async fn get_emotions_sets() -> HashMap<String, i8> {
+    let data = reqwest::get("http://localhost:4000/emotion_values")
+        .await
+        .unwrap()
+        .text()
+        .await
+        .unwrap();
+    let mut hashmap: HashMap<String, i8> = HashMap::new();
+    for line in data.lines() {
+        let vec: Vec<&str> = line.split('\t').collect();
+        hashmap.insert(vec[0].to_string(), i8::from_str_radix(vec[1], 10).unwrap());
+    }
+    return hashmap;
+}
+
 #[tokio::main]
 async fn main() {
+    let val = EMOTIONS_DICTIONARY
+        .get()
+        .await
+        .get(&String::from("abducted"))
+        .unwrap();
+    println!("============================ {}", val);
     let parent = ActorSpawner::new().await.start().await.unwrap();
     parent.wait_for_stop().await;
 }
