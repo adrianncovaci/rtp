@@ -82,7 +82,27 @@ impl Handler<TweetMessage> for LeActeur {
     async fn handle(&mut self, ctx: &mut Context<Self>, msg: TweetMessage) {
         match msg {
             TweetMessage::TweetText(text) => {
-                println!("leacteur with id {} got \"{}\"", self.id, text);
+                let text = text.replace(".", "");
+                let text = text.replace("?", "");
+                let text = text.replace("!", "");
+                let words: Vec<&str> = text.split(" ").collect();
+                let mut sum = 0;
+                let size = words.len() as i32;
+                for word in words {
+                    if EMOTIONS_DICTIONARY
+                        .get()
+                        .await
+                        .contains_key(&String::from(word))
+                    {
+                        sum += *EMOTIONS_DICTIONARY
+                            .get()
+                            .await
+                            .get(&String::from(word))
+                            .unwrap() as i32;
+                    }
+                }
+                let result: f32 = sum as f32 / size as f32;
+                println!("#id {} got \"{}\" \tTWEET SCORE: {}", self.id, text, result);
             }
             TweetMessage::Halt => {
                 println!("Killing leacteur {}", self.id);
@@ -179,12 +199,6 @@ async fn get_emotions_sets() -> HashMap<String, i8> {
 
 #[tokio::main]
 async fn main() {
-    let val = EMOTIONS_DICTIONARY
-        .get()
-        .await
-        .get(&String::from("abducted"))
-        .unwrap();
-    println!("============================ {}", val);
     let parent = ActorSpawner::new().await.start().await.unwrap();
     parent.wait_for_stop().await;
 }
