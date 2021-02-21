@@ -7,13 +7,6 @@ use bytes::Bytes;
 use lazy_static::lazy_static;
 use messages::TweetMessage;
 
-lazy_static! {
-    #[derive(Debug)]
-    static ref EMOTIONS_DICTIONARY: AsyncOnce<HashMap<String, i8>> = AsyncOnce::new(async {
-        get_emotions_sets().await
-    });
-}
-
 struct ActorSpawner {
     childs: Vec<Addr<LeActeur>>,
     msg_producer: Addr<MessageProducer>,
@@ -40,9 +33,11 @@ impl Actor for ActorSpawner {
 impl Handler<InitializeWorkers> for ActorSpawner {
     async fn handle(&mut self, _ctx: &mut Context<Self>, _msg: InitializeWorkers) {
         let msg_producer = self.msg_producer.clone();
+        let dict_map = get_emotions_sets().await;
         let actor_ids = vec![1, 2, 3, 4, 5];
         let child_actors_futures = actor_ids.into_iter().map(move |id| LeActeur {
             id,
+            hmap: dict_map.clone(),
             msg_producer: msg_producer.clone(),
         });
 
@@ -62,6 +57,7 @@ impl Message for InitializeWorkers {
 #[derive(Clone)]
 struct LeActeur {
     id: u32,
+    hmap: HashMap<String, i8>,
     msg_producer: Addr<MessageProducer>,
 }
 
@@ -89,16 +85,8 @@ impl Handler<TweetMessage> for LeActeur {
                 let mut sum = 0;
                 let size = words.len() as i32;
                 for word in words {
-                    if EMOTIONS_DICTIONARY
-                        .get()
-                        .await
-                        .contains_key(&String::from(word))
-                    {
-                        sum += *EMOTIONS_DICTIONARY
-                            .get()
-                            .await
-                            .get(&String::from(word))
-                            .unwrap() as i32;
+                    if self.hmap.contains_key(&String::from(word)) {
+                        sum += *self.hmap.get(&String::from(word)).unwrap() as i32;
                     }
                 }
                 let result: f32 = sum as f32 / size as f32;
