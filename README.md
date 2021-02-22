@@ -1,2 +1,2 @@
 # rtp
-![](Covaci_RTP_LAB.mkv)
+https://youtu.be/X-I_MGgs4wk
