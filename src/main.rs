@@ -1,4 +1,8 @@
-use std::{collections::HashMap, thread, time::Duration};
+use std::{
+    collections::HashMap,
+    thread,
+    time::{Duration, SystemTime},
+};
 
 use actor_framework::Message;
 use actor_framework::*;
@@ -6,10 +10,25 @@ use async_once::AsyncOnce;
 use bytes::Bytes;
 use lazy_static::lazy_static;
 use messages::TweetMessage;
+use reqwest::get;
 
 struct ActorSpawner {
     childs: Vec<Addr<LeActeur>>,
     msg_producer: Addr<MessageProducer>,
+}
+
+struct RegisterProducer(Addr<ActorSpawner>);
+
+#[async_trait::async_trait]
+impl Message for RegisterProducer {
+    type Result = ();
+}
+
+#[async_trait::async_trait]
+impl Handler<RegisterProducer> for MessageProducer {
+    async fn handle(&mut self, ctx: &mut Context<Self>, msg: RegisterProducer) {
+        self.spawner_addr = Some(msg.0.clone());
+    }
 }
 
 impl ActorSpawner {
@@ -24,7 +43,10 @@ impl ActorSpawner {
 #[async_trait::async_trait]
 impl Actor for ActorSpawner {
     async fn started(&mut self, ctx: &mut Context<Self>) -> Result<()> {
-        let _ = ctx.address().send(InitializeWorkers);
+        let _ = ctx.address().send(InitializeWorkers(5));
+        let _ = self
+            .msg_producer
+            .send(RegisterProducer(ctx.address().clone()));
         Ok(())
     }
 }
@@ -34,9 +56,10 @@ impl Handler<InitializeWorkers> for ActorSpawner {
     async fn handle(&mut self, _ctx: &mut Context<Self>, _msg: InitializeWorkers) {
         let msg_producer = self.msg_producer.clone();
         let dict_map = get_emotions_sets().await;
-        let actor_ids = vec![1, 2, 3, 4, 5];
+        let actor_ids: Vec<u32> = (1..=_msg.0).collect();
+        let child_len = self.childs.len() as u32;
         let child_actors_futures = actor_ids.into_iter().map(move |id| LeActeur {
-            id,
+            id: child_len + id,
             hmap: dict_map.clone(),
             msg_producer: msg_producer.clone(),
         });
@@ -44,13 +67,25 @@ impl Handler<InitializeWorkers> for ActorSpawner {
         let child_actors = child_actors_futures
             .into_iter()
             .map(|actor| async { Supervisor::start(move || actor.clone()).await.unwrap() });
-        let child_actors = futures::future::join_all(child_actors).await;
-        self.childs = child_actors;
+        let mut child_actors = futures::future::join_all(child_actors).await;
+        self.childs.append(&mut child_actors);
     }
 }
 
-struct InitializeWorkers;
+#[async_trait::async_trait]
+impl Handler<RemoveWorker> for ActorSpawner {
+    async fn handle(&mut self, _ctx: &mut Context<Self>, _msg: RemoveWorker) {
+        let last = self.childs.pop().unwrap();
+        println!("Firing worker {}", last.actor_id);
+    }
+}
+
+struct InitializeWorkers(u32);
 impl Message for InitializeWorkers {
+    type Result = ();
+}
+struct RemoveWorker;
+impl Message for RemoveWorker {
     type Result = ();
 }
 
@@ -64,7 +99,7 @@ struct LeActeur {
 #[async_trait::async_trait]
 impl Actor for LeActeur {
     async fn started(&mut self, ctx: &mut Context<Self>) -> Result<()> {
-        println!("started leacteur ~ {}", self.id);
+        println!("Starting leacteur {}", self.id);
         let self_sender = ctx.address().sender();
         let _ = self.msg_producer.send(SubscribeToProducer {
             sender: self_sender,
@@ -104,6 +139,7 @@ impl Handler<TweetMessage> for LeActeur {
 #[async_trait::async_trait]
 impl Handler<SubscribeToProducer> for MessageProducer {
     async fn handle(&mut self, ctx: &mut Context<Self>, msg: SubscribeToProducer) {
+        println!("appending sender to msgproducer");
         self.subscribers.push(msg.sender);
     }
 }
@@ -119,11 +155,13 @@ impl Message for SubscribeToProducer {
 
 struct MessageProducer {
     subscribers: Vec<Sender<TweetMessage>>,
+    spawner_addr: Option<Addr<ActorSpawner>>,
 }
 impl MessageProducer {
     fn new() -> Self {
         Self {
             subscribers: Vec::new(),
+            spawner_addr: None,
         }
     }
 }
@@ -151,11 +189,55 @@ impl Handler<HandleMessages> for MessageProducer {
             .unwrap();
         let mut index = 0;
 
+        let mut chunk_time = SystemTime::now();
         while let Some(item) = res.chunk().await.unwrap() {
+            if SystemTime::now()
+                .duration_since(chunk_time)
+                .unwrap()
+                .le(&Duration::from_micros(40))
+                && self.subscribers.len() < 10
+            {
+                let _ = self.spawner_addr.as_ref().unwrap().send(AddWorker);
+                std::thread::sleep(Duration::from_millis(10));
+            } else if SystemTime::now()
+                .duration_since(chunk_time)
+                .unwrap()
+                .gt(&Duration::from_micros(100))
+                && self.subscribers.len() > 5
+            {
+                let _ = self.spawner_addr.as_ref().unwrap().send(RemoveWorker);
+                std::thread::sleep(Duration::from_millis(1));
+                index = self.subscribers.len() - 1;
+            }
+
             let response = get_message_from_chunk(item);
-            self.subscribers[index].send(response.clone()).unwrap();
-            index = (index + 1) % self.subscribers.len();
+            if self.subscribers.len() > 0 {
+                self.subscribers[index].send(response.clone()).unwrap();
+                index = (index + 1) % self.subscribers.len();
+            }
+            chunk_time = SystemTime::now();
         }
+    }
+}
+
+struct AddWorker;
+impl Message for AddWorker {
+    type Result = ();
+}
+
+#[async_trait::async_trait]
+impl Handler<AddWorker> for ActorSpawner {
+    async fn handle(&mut self, ctx: &mut Context<Self>, msg: AddWorker) {
+        let msg_producer = self.msg_producer.clone();
+        let dict_map = get_emotions_sets().await;
+        let new_id = self.childs.len() as u32 + 1;
+        let new_actor = LeActeur {
+            id: new_id,
+            hmap: dict_map.clone(),
+            msg_producer: msg_producer.clone(),
+        };
+        let supervisor = Supervisor::start(move || new_actor.clone()).await.unwrap();
+        self.childs.push(supervisor);
     }
 }
 
