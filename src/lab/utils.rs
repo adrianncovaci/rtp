@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use bytes::Bytes;
 
-use crate::messages::TweetMessage;
+use super::messages::TweetMessage;
 
 pub fn get_message_from_chunk(bytes: Bytes) -> TweetMessage {
     let mut data = String::from_utf8(bytes.to_vec()).unwrap();

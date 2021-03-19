@@ -1,4 +1,7 @@
-use crate::{actor_spawner::ActorSpawner, Addr, Message, Sender};
+use super::actor_spawner::ActorSpawner;
+use crate::actor::actor::Message;
+use crate::actor::addr::Addr;
+use crate::actor::caller::Sender;
 
 #[derive(Debug, Clone)]
 pub enum TweetMessage {

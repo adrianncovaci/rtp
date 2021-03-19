@@ -1,17 +1,17 @@
 use std::time::{Duration, SystemTime};
 
-pub use crate::caller::{Caller, Sender};
-use crate::Result;
-use crate::{
+use super::messages::{AddWorker, RemoveWorker, SubscribeToProducer};
+use super::{
     actor_spawner::ActorSpawner,
     messages::{RegisterProducer, TweetMessage},
     utils::*,
-    Addr,
 };
-use crate::{
-    messages::{self, AddWorker, RemoveWorker, SubscribeToProducer},
-    Actor, Context, Handler, Message,
-};
+use crate::actor::actor::Handler;
+use crate::actor::actor::{Actor, Message};
+use crate::actor::addr::Addr;
+pub use crate::actor::caller::{Caller, Sender};
+use crate::actor::context::Context;
+use crate::Result;
 pub struct MessageProducer {
     subscribers: Vec<Sender<TweetMessage>>,
     spawner_addr: Option<Addr<ActorSpawner>>,
@@ -36,7 +36,6 @@ impl Actor for MessageProducer {
 #[async_trait::async_trait]
 impl Handler<SubscribeToProducer> for MessageProducer {
     async fn handle(&mut self, ctx: &mut Context<Self>, msg: SubscribeToProducer) {
-        println!("appending sender to msgproducer");
         self.subscribers.push(msg.sender);
     }
 }

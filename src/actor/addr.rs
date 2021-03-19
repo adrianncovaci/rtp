@@ -1,4 +1,11 @@
-use crate::{Actor, ActorId, Caller, Context, Error, Handler, Message, Result, Sender};
+use super::actor::Handler;
+use super::actor::Message;
+use super::caller::Caller;
+use super::caller::Sender;
+use super::{actor::Actor, context::Context};
+use crate::ActorId;
+use crate::Error;
+use crate::Result;
 use futures::channel::{mpsc, oneshot};
 use futures::future::Shared;
 use futures::Future;

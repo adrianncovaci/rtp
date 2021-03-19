@@ -1,4 +1,9 @@
-use crate::{Actor, Addr, Context, Handler, Message, Result, Sender, Service};
+use super::actor::Handler;
+use super::actor::Message;
+use super::caller::Sender;
+use super::{actor::Actor, context::Context};
+use super::{addr::Addr, service::Service};
+use crate::Result;
 use fnv::FnvHasher;
 use std::any::Any;
 use std::collections::HashMap;

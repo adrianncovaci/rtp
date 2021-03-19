@@ -1,4 +1,4 @@
-use crate::{ActorId, Message, Result};
+use crate::{actor::actor::Message, ActorId, Result};
 use std::future::Future;
 use std::hash::{Hash, Hasher};
 use std::pin::Pin;

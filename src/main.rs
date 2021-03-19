@@ -1,5 +1,4 @@
-use actor_framework::actor_spawner::ActorSpawner;
-use actor_framework::*;
+use actor_framework::{actor::actor::Actor, lab::actor_spawner::ActorSpawner};
 #[tokio::main]
 async fn main() {
     let parent = ActorSpawner::new("1").await.start().await.unwrap();

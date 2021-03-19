@@ -1,8 +1,13 @@
-use crate::leacteur::*;
-use crate::utils::*;
+use super::leacteur::*;
+use super::message_producer::MessageProducer;
+use super::messages::*;
+use super::utils::*;
+use crate::actor::actor::Actor;
+use crate::actor::actor::Handler;
+use crate::actor::addr::Addr;
+use crate::actor::context::Context;
+use crate::actor::supervisor::Supervisor;
 use crate::Result;
-use crate::{message_producer::MessageProducer, Addr, Handler, Supervisor};
-use crate::{messages::*, Actor, Context};
 
 pub struct ActorSpawner {
     childs: Vec<Addr<LeActeur>>,

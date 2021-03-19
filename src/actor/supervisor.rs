@@ -1,7 +1,7 @@
-use crate::addr::ActorEvent;
+use super::addr::ActorEvent;
+use super::runtime::spawn;
+use super::{actor::Actor, addr::Addr, context::Context};
 use crate::error::Result;
-use crate::runtime::spawn;
-use crate::{Actor, Addr, Context};
 use futures::StreamExt;
 
 pub struct Supervisor;

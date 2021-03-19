@@ -1,9 +1,10 @@
+use super::message_producer::MessageProducer;
+use super::messages::*;
+use crate::actor::actor::Actor;
+use crate::actor::actor::Handler;
+use crate::actor::addr::Addr;
+use crate::actor::context::Context;
 use crate::Result;
-use crate::{
-    message_producer::{self, MessageProducer},
-    Actor, Addr, Context,
-};
-use crate::{messages::*, Handler};
 use std::{collections::HashMap, time::Duration};
 
 #[derive(Clone)]
