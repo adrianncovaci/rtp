@@ -4,6 +4,7 @@ use crate::actor::actor::Actor;
 use crate::actor::actor::Handler;
 use crate::actor::addr::Addr;
 use crate::actor::context::Context;
+use crate::lab::aggregator::*;
 use crate::Result;
 use std::{collections::HashMap, time::Duration};
 
@@ -12,6 +13,7 @@ pub struct LeActeur {
     pub id: u32,
     pub hmap: HashMap<String, i8>,
     pub msg_producer: Addr<MessageProducer>,
+    pub aggregator: Addr<TweetAggregator>,
 }
 
 #[async_trait::async_trait]
@@ -30,7 +32,8 @@ impl Actor for LeActeur {
 impl Handler<TweetMessage> for LeActeur {
     async fn handle(&mut self, ctx: &mut Context<Self>, msg: TweetMessage) {
         match msg {
-            TweetMessage::TweetText(text) => {
+            TweetMessage::Tweet(tweet) => {
+                let text = tweet.text.clone();
                 let text = text.replace(".", "");
                 let text = text.replace("?", "");
                 let text = text.replace("!", "");
@@ -42,8 +45,13 @@ impl Handler<TweetMessage> for LeActeur {
                         sum += *self.hmap.get(&String::from(word)).unwrap() as i32;
                     }
                 }
-                let result: f32 = sum as f32 / size as f32;
-                println!("#id {} got \"{}\" \tTWEET SCORE: {}", self.id, text, result);
+                let sentiment_score: f32 = sum as f32 / size as f32;
+                let engagement_score: f32 = (tweet.favorite_count + tweet.retweet_count) as f32
+                    / tweet.followers_count as f32;
+                let tweet_detail = TweetDetails::new(tweet, engagement_score, sentiment_score);
+                println!("sending");
+                self.aggregator.send(tweet_detail).unwrap();
+                println!("sent");
             }
             TweetMessage::Halt => {
                 println!("Killing leacteur {}", self.id);

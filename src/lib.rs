@@ -1,4 +1,6 @@
 #![allow(clippy::type_complexity)]
+#[macro_use]
+extern crate diesel;
 
 pub mod actor;
 pub mod lab;

@@ -1,3 +1,4 @@
+use super::aggregator::*;
 use super::leacteur::*;
 use super::message_producer::MessageProducer;
 use super::messages::*;
@@ -12,13 +13,16 @@ use crate::Result;
 pub struct ActorSpawner {
     childs: Vec<Addr<LeActeur>>,
     msg_producer: Addr<MessageProducer>,
+    tweet_aggregator: Addr<TweetAggregator>,
 }
 
 impl ActorSpawner {
     pub async fn new(url: &'static str) -> Self {
+        let db_connection = establish_connection();
         Self {
             childs: Vec::new(),
             msg_producer: MessageProducer::new(url).start().await.unwrap(),
+            tweet_aggregator: TweetAggregator { db_connection }.start().await.unwrap(),
         }
     }
 }
@@ -26,7 +30,7 @@ impl ActorSpawner {
 #[async_trait::async_trait]
 impl Actor for ActorSpawner {
     async fn started(&mut self, ctx: &mut Context<Self>) -> Result<()> {
-        let _ = ctx.address().send(InitializeWorkers(5));
+        let _ = ctx.address().send(InitializeWorkers(10));
         let _ = self
             .msg_producer
             .send(RegisterProducer(ctx.address().clone()));
@@ -38,6 +42,7 @@ impl Actor for ActorSpawner {
 impl Handler<InitializeWorkers> for ActorSpawner {
     async fn handle(&mut self, _ctx: &mut Context<Self>, _msg: InitializeWorkers) {
         let msg_producer = self.msg_producer.clone();
+        let aggregator = self.tweet_aggregator.clone();
         let dict_map = get_emotions_sets().await;
         let actor_ids: Vec<u32> = (1..=_msg.0).collect();
         let child_len = self.childs.len() as u32;
@@ -45,6 +50,7 @@ impl Handler<InitializeWorkers> for ActorSpawner {
             id: child_len + id,
             hmap: dict_map.clone(),
             msg_producer: msg_producer.clone(),
+            aggregator: aggregator.clone(),
         });
 
         let child_actors = child_actors_futures
@@ -67,12 +73,14 @@ impl Handler<RemoveWorker> for ActorSpawner {
 impl Handler<AddWorker> for ActorSpawner {
     async fn handle(&mut self, ctx: &mut Context<Self>, msg: AddWorker) {
         let msg_producer = self.msg_producer.clone();
+        let aggregator = self.tweet_aggregator.clone();
         let dict_map = get_emotions_sets().await;
         let new_id = self.childs.len() as u32 + 1;
         let new_actor = LeActeur {
             id: new_id,
-            hmap: dict_map.clone(),
-            msg_producer: msg_producer.clone(),
+            hmap: dict_map,
+            msg_producer,
+            aggregator,
         };
         let supervisor = Supervisor::start(move || new_actor.clone()).await.unwrap();
         self.childs.push(supervisor);

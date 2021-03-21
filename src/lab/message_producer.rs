@@ -12,6 +12,7 @@ use crate::actor::addr::Addr;
 pub use crate::actor::caller::{Caller, Sender};
 use crate::actor::context::Context;
 use crate::Result;
+
 pub struct MessageProducer {
     subscribers: Vec<Sender<TweetMessage>>,
     spawner_addr: Option<Addr<ActorSpawner>>,
@@ -60,7 +61,7 @@ impl Handler<HandleMessages> for MessageProducer {
                 .duration_since(chunk_time)
                 .unwrap()
                 .le(&Duration::from_micros(40))
-                && self.subscribers.len() < 10
+                && self.subscribers.len() < 15
             {
                 let _ = self.spawner_addr.as_ref().unwrap().send(AddWorker);
                 std::thread::sleep(Duration::from_millis(10));
@@ -68,7 +69,7 @@ impl Handler<HandleMessages> for MessageProducer {
                 .duration_since(chunk_time)
                 .unwrap()
                 .gt(&Duration::from_micros(100))
-                && self.subscribers.len() > 5
+                && self.subscribers.len() > 10
             {
                 let _ = self.spawner_addr.as_ref().unwrap().send(RemoveWorker);
                 std::thread::sleep(Duration::from_millis(1));
