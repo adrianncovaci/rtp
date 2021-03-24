@@ -48,7 +48,8 @@ impl Handler<TweetMessage> for LeActeur {
                 let sentiment_score: f32 = sum as f32 / size as f32;
                 let engagement_score: f32 = (tweet.favorite_count + tweet.retweet_count) as f32
                     / tweet.followers_count as f32;
-                let tweet_detail = TweetDetails::new(tweet, engagement_score, sentiment_score);
+                let tweet_detail =
+                    TweetDetails::new(tweet, String::new(), engagement_score, sentiment_score);
                 println!("sending");
                 self.aggregator.send(tweet_detail).unwrap();
                 println!("sent");

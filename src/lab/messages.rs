@@ -4,6 +4,11 @@ use crate::actor::addr::Addr;
 use crate::actor::caller::Sender;
 use uuid::Uuid;
 
+pub struct InsertUsers(pub std::time::SystemTime);
+pub struct FlushUsers;
+pub struct InsertTweets(pub std::time::SystemTime);
+pub struct FlushTweets;
+
 #[derive(Debug, Clone)]
 pub enum TweetMessage {
     Tweet(Tweet),
@@ -22,15 +27,17 @@ pub struct Tweet {
 #[derive(Debug, Clone)]
 pub struct TweetDetails {
     pub uuid: Uuid,
+    pub user_id: String,
     pub tweet: Tweet,
     pub engagement_score: f32,
     pub sentiment_score: f32,
 }
 
 impl TweetDetails {
-    pub fn new(tweet: Tweet, engagement_score: f32, sentiment_score: f32) -> Self {
+    pub fn new(tweet: Tweet, user_id: String, engagement_score: f32, sentiment_score: f32) -> Self {
         Self {
             uuid: Uuid::new_v4(),
+            user_id,
             tweet,
             engagement_score,
             sentiment_score,
@@ -54,6 +61,26 @@ impl Tweet {
         }
         false
     }
+}
+
+#[async_trait::async_trait]
+impl Message for InsertUsers {
+    type Result = ();
+}
+
+#[async_trait::async_trait]
+impl Message for FlushUsers {
+    type Result = ();
+}
+
+#[async_trait::async_trait]
+impl Message for InsertTweets {
+    type Result = ();
+}
+
+#[async_trait::async_trait]
+impl Message for FlushTweets {
+    type Result = ();
 }
 
 #[async_trait::async_trait]

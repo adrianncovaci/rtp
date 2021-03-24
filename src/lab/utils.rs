@@ -1,5 +1,7 @@
-use super::messages::{Tweet, TweetMessage};
+use super::messages::{Tweet, TweetDetails, TweetMessage};
 use super::models::NewUser;
+use super::models::*;
+use super::tweetmodel::*;
 use bytes::Bytes;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
@@ -80,11 +82,44 @@ pub fn establish_connection() -> PgConnection {
     PgConnection::establish(&database_url).expect(&format!("Error connecting to {}", database_url))
 }
 
-pub fn create_user<'a>(conn: &PgConnection, username: &'a str) {
+pub fn create_user<'a>(conn: &PgConnection, users: &Vec<User>) {
     use super::schema::users;
-    let new_user = NewUser { username };
+    let mut new_users = Vec::new();
+    for tweet in users {
+        let new_user = NewUser {
+            user_id: tweet.id.clone(),
+            username: tweet.username.as_str(),
+        };
+        new_users.push(new_user);
+    }
     diesel::insert_into(users::table)
-        .values(new_user)
+        .values(new_users)
         .execute(conn)
-        .expect("couldn't create user");
+        .expect("couldn't insert user");
+}
+
+pub fn create_tweet(conn: &PgConnection, tweets: &Vec<TweetDetails>) {
+    use super::schema::tweets;
+    let mut new_tweets = Vec::new();
+    for tweet in tweets {
+        let mut new_tweet = NewTweet::default();
+        let id_from_uuid = tweet.uuid.clone().to_string();
+        new_tweet.tweet_id = id_from_uuid;
+        new_tweet.text = &tweet.tweet.text;
+        new_tweet.followers_count = tweet.tweet.followers_count as i32;
+        new_tweet.favorite_count = tweet.tweet.favorite_count as i32;
+        new_tweet.retweet_count = tweet.tweet.retweet_count as i32;
+        let eng_score = tweet.engagement_score.to_string();
+        let eng_score = eng_score;
+        new_tweet.engagement_score = eng_score;
+        let sent_score = tweet.sentiment_score.to_string();
+        let sent_score = sent_score;
+        new_tweet.sentiment_score = sent_score;
+        new_tweet.user_id = &tweet.user_id;
+        new_tweets.push(new_tweet);
+    }
+    diesel::insert_into(tweets::table)
+        .values(new_tweets)
+        .execute(conn)
+        .expect("couldn't insert tweet");
 }

@@ -2,6 +2,7 @@ use super::aggregator::*;
 use super::leacteur::*;
 use super::message_producer::MessageProducer;
 use super::messages::*;
+use super::sink::*;
 use super::utils::*;
 use crate::actor::actor::Actor;
 use crate::actor::actor::Handler;
@@ -14,15 +15,40 @@ pub struct ActorSpawner {
     childs: Vec<Addr<LeActeur>>,
     msg_producer: Addr<MessageProducer>,
     tweet_aggregator: Addr<TweetAggregator>,
+    tweet_sink: Addr<TweetSink>,
+    user_sink: Addr<UserSink>,
 }
 
 impl ActorSpawner {
     pub async fn new(url: &'static str) -> Self {
         let db_connection = establish_connection();
+        let tweet_sink = TweetSink {
+            db_connection: establish_connection(),
+            tweets: Vec::new(),
+        }
+        .start()
+        .await
+        .unwrap();
+        let user_sink = UserSink {
+            db_connection: establish_connection(),
+            users: Vec::new(),
+        }
+        .start()
+        .await
+        .unwrap();
         Self {
             childs: Vec::new(),
             msg_producer: MessageProducer::new(url).start().await.unwrap(),
-            tweet_aggregator: TweetAggregator { db_connection }.start().await.unwrap(),
+            tweet_aggregator: TweetAggregator {
+                db_connection,
+                tweet_sink: tweet_sink.clone(),
+                user_sink: user_sink.clone(),
+            }
+            .start()
+            .await
+            .unwrap(),
+            tweet_sink,
+            user_sink,
         }
     }
 }

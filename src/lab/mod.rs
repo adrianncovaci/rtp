@@ -5,4 +5,6 @@ pub mod message_producer;
 pub mod messages;
 pub mod models;
 pub mod schema;
+pub mod sink;
+pub mod tweetmodel;
 pub mod utils;
