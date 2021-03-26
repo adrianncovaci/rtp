@@ -1,77 +1,62 @@
+use super::aggregator::TweetAggregator;
 use super::messages::*;
 use super::models::*;
 use super::utils::*;
 use crate::actor::actor::*;
+use crate::actor::addr::*;
 use crate::actor::context::*;
+use crate::Result;
 use diesel::pg::PgConnection;
 
 pub struct TweetSink {
     pub db_connection: PgConnection,
     pub tweets: Vec<TweetDetails>,
+    pub aggregator: Addr<TweetAggregator>,
 }
 
 pub struct UserSink {
     pub db_connection: PgConnection,
     pub users: Vec<User>,
+    pub aggregator: Addr<TweetAggregator>,
 }
 
-impl Actor for UserSink {}
 #[async_trait::async_trait]
-impl Handler<User> for UserSink {
-    async fn handle(&mut self, _ctx: &mut Context<Self>, msg: User) {
-        self.users.push(msg);
+impl Actor for UserSink {
+    async fn started(&mut self, ctx: &mut Context<Self>) -> Result<()> {
+        let _ = ctx.address().send(StartPullingUsers);
+        Ok(())
     }
 }
 
 #[async_trait::async_trait]
-impl Handler<InsertUsers> for UserSink {
-    async fn handle(&mut self, ctx: &mut Context<Self>, msg: InsertUsers) {
-        if self.users.len() >= 128
-            || std::time::SystemTime::now()
-                .duration_since(msg.0)
-                .unwrap()
-                .ge(&std::time::Duration::from_millis(200))
-        {
-            create_user(&self.db_connection, &self.users);
-            let _ = ctx.address().send(FlushUsers);
+impl Actor for TweetSink {
+    async fn started(&mut self, ctx: &mut Context<Self>) -> Result<()> {
+        let _ = ctx.address().send(StartPullingTweets);
+        Ok(())
+    }
+}
+
+#[async_trait::async_trait]
+impl Handler<StartPullingUsers> for UserSink {
+    async fn handle(&mut self, ctx: &mut Context<Self>, _msg: StartPullingUsers) {
+        println!("pulling users");
+        let users = self.aggregator.call(PullUsers).await.unwrap();
+        if users.len() != 0 {
+            create_user(&self.db_connection, &users);
         }
+        ctx.send_later(StartPullingUsers, std::time::Duration::from_millis(200));
     }
 }
 
 #[async_trait::async_trait]
-impl Handler<FlushUsers> for UserSink {
-    async fn handle(&mut self, ctx: &mut Context<Self>, msg: FlushUsers) {
-        self.users = vec![];
-    }
-}
-
-impl Actor for TweetSink {}
-#[async_trait::async_trait]
-impl Handler<TweetDetails> for TweetSink {
-    async fn handle(&mut self, _ctx: &mut Context<Self>, msg: TweetDetails) {
-        self.tweets.push(msg);
-    }
-}
-
-#[async_trait::async_trait]
-impl Handler<InsertTweets> for TweetSink {
-    async fn handle(&mut self, ctx: &mut Context<Self>, msg: InsertTweets) {
-        if self.tweets.len() >= 128
-            || std::time::SystemTime::now()
-                .duration_since(msg.0)
-                .unwrap()
-                .ge(&std::time::Duration::from_millis(200))
-        {
-            create_tweet(&self.db_connection, &self.tweets);
-            let _ = ctx.address().send(FlushTweets);
+impl Handler<StartPullingTweets> for TweetSink {
+    async fn handle(&mut self, ctx: &mut Context<Self>, _msg: StartPullingTweets) {
+        println!("pulling tweets");
+        let tweets = self.aggregator.call(PullTweets).await.unwrap();
+        if tweets.len() != 0 {
+            create_tweet(&self.db_connection, &tweets);
         }
-    }
-}
-
-#[async_trait::async_trait]
-impl Handler<FlushTweets> for TweetSink {
-    async fn handle(&mut self, ctx: &mut Context<Self>, msg: FlushTweets) {
-        self.tweets = vec![];
+        ctx.send_later(StartPullingTweets, std::time::Duration::from_millis(200));
     }
 }
 

@@ -1,13 +1,14 @@
 use super::actor_spawner::ActorSpawner;
+use super::models::User;
 use crate::actor::actor::Message;
 use crate::actor::addr::Addr;
 use crate::actor::caller::Sender;
 use uuid::Uuid;
 
-pub struct InsertUsers(pub std::time::SystemTime);
-pub struct FlushUsers;
-pub struct InsertTweets(pub std::time::SystemTime);
-pub struct FlushTweets;
+pub struct PullUsers;
+pub struct PullTweets;
+pub struct StartPullingTweets;
+pub struct StartPullingUsers;
 
 #[derive(Debug, Clone)]
 pub enum TweetMessage {
@@ -62,25 +63,24 @@ impl Tweet {
         false
     }
 }
-
 #[async_trait::async_trait]
-impl Message for InsertUsers {
+impl Message for StartPullingUsers {
     type Result = ();
 }
 
 #[async_trait::async_trait]
-impl Message for FlushUsers {
+impl Message for StartPullingTweets {
     type Result = ();
 }
 
 #[async_trait::async_trait]
-impl Message for InsertTweets {
-    type Result = ();
+impl Message for PullUsers {
+    type Result = Vec<User>;
 }
 
 #[async_trait::async_trait]
-impl Message for FlushTweets {
-    type Result = ();
+impl Message for PullTweets {
+    type Result = Vec<TweetDetails>;
 }
 
 #[async_trait::async_trait]

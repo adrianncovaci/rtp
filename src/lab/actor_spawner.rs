@@ -22,8 +22,17 @@ pub struct ActorSpawner {
 impl ActorSpawner {
     pub async fn new(url: &'static str) -> Self {
         let db_connection = establish_connection();
+        let aggregator = TweetAggregator {
+            db_connection,
+            tweet_details: Vec::new(),
+            users: Vec::new(),
+        }
+        .start()
+        .await
+        .unwrap();
         let tweet_sink = TweetSink {
             db_connection: establish_connection(),
+            aggregator: aggregator.clone(),
             tweets: Vec::new(),
         }
         .start()
@@ -32,21 +41,16 @@ impl ActorSpawner {
         let user_sink = UserSink {
             db_connection: establish_connection(),
             users: Vec::new(),
+            aggregator: aggregator.clone(),
         }
         .start()
         .await
         .unwrap();
+
         Self {
             childs: Vec::new(),
             msg_producer: MessageProducer::new(url).start().await.unwrap(),
-            tweet_aggregator: TweetAggregator {
-                db_connection,
-                tweet_sink: tweet_sink.clone(),
-                user_sink: user_sink.clone(),
-            }
-            .start()
-            .await
-            .unwrap(),
+            tweet_aggregator: aggregator,
             tweet_sink,
             user_sink,
         }
