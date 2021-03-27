@@ -1,8 +1,10 @@
+#[macro_use]
 use super::actor_spawner::ActorSpawner;
 use super::models::User;
 use crate::actor::actor::Message;
 use crate::actor::addr::Addr;
 use crate::actor::caller::Sender;
+use diesel::Queryable;
 use uuid::Uuid;
 
 pub struct PullUsers;
@@ -16,7 +18,7 @@ pub enum TweetMessage {
     Halt,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Queryable, Debug, Clone)]
 pub struct Tweet {
     pub text: String,
     pub user: String,

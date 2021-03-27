@@ -16,6 +16,7 @@ dependencies = [
  "futures",
  "lazy_static",
  "once_cell",
+ "rand",
  "reqwest",
  "serde",
  "slab",

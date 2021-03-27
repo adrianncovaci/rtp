@@ -32,6 +32,7 @@ async_once = "0.2.1"
 diesel = { version = "1.4.4", features = ["postgres", "numeric"] }
 dotenv = "0.15.0"
 uuid = { version = "0.8", features = ["v4"] }
+rand = "0.8.0"
 
 
 [features]

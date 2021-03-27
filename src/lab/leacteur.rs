@@ -50,9 +50,7 @@ impl Handler<TweetMessage> for LeActeur {
                     / tweet.followers_count as f32;
                 let tweet_detail =
                     TweetDetails::new(tweet, String::new(), engagement_score, sentiment_score);
-                println!("sending");
                 self.aggregator.send(tweet_detail).unwrap();
-                println!("sent");
             }
             TweetMessage::Halt => {
                 println!("Killing leacteur {}", self.id);

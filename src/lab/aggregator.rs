@@ -18,7 +18,6 @@ impl Actor for TweetAggregator {}
 #[async_trait::async_trait]
 impl Handler<TweetDetails> for TweetAggregator {
     async fn handle(&mut self, ctx: &mut Context<Self>, mut msg: TweetDetails) {
-        println!("got msg {:?}", msg.uuid);
         let user_id = Uuid::new_v4();
         let user = User {
             id: user_id.to_string(),
@@ -35,14 +34,6 @@ impl Handler<TweetDetails> for TweetAggregator {
 
         self.users.push(user);
         self.tweet_details.push(tweet_details);
-
-        //let _ = self.user_sink.send(user.clone()).unwrap();
-        //let _ = self.user_sink.send(InsertUsers(current_time)).unwrap();
-        //std::thread::sleep(std::time::Duration::from_millis(40));
-        //let _ = self.tweet_sink.send(tweet_details.clone()).unwrap();
-        //let _ = self.tweet_sink.send(InsertTweets(current_time)).unwrap();
-
-        println!("done");
     }
 }
 

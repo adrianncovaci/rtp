@@ -98,14 +98,15 @@ pub fn create_user<'a>(conn: &PgConnection, users: &Vec<User>) {
         .expect("couldn't insert user");
 }
 
-pub fn create_tweet(conn: &PgConnection, tweets: &Vec<TweetDetails>) {
+pub fn create_tweet(conn: &PgConnection, tweets_array: &Vec<TweetDetails>) {
     use super::schema::tweets;
+    use super::schema::users::dsl::*;
     let mut new_tweets = Vec::new();
-    for tweet in tweets {
+    for tweet in tweets_array {
         let mut new_tweet = NewTweet::default();
         let id_from_uuid = tweet.uuid.clone().to_string();
         new_tweet.tweet_id = id_from_uuid;
-        new_tweet.text = &tweet.tweet.text;
+        new_tweet.text = tweet.tweet.text.clone();
         new_tweet.followers_count = tweet.tweet.followers_count as i32;
         new_tweet.favorite_count = tweet.tweet.favorite_count as i32;
         new_tweet.retweet_count = tweet.tweet.retweet_count as i32;
@@ -115,8 +116,15 @@ pub fn create_tweet(conn: &PgConnection, tweets: &Vec<TweetDetails>) {
         let sent_score = tweet.sentiment_score.to_string();
         let sent_score = sent_score;
         new_tweet.sentiment_score = sent_score;
-        new_tweet.user_id = &tweet.user_id;
-        new_tweets.push(new_tweet);
+        new_tweet.user_id = Some(tweet.user_id.clone());
+        let result = users
+            .filter(user_id.eq(new_tweet.user_id.clone().unwrap()))
+            .limit(1)
+            .load::<User>(conn)
+            .expect("Error querying tweets");
+        if result.len() != 0 {
+            new_tweets.push(new_tweet);
+        }
     }
     diesel::insert_into(tweets::table)
         .values(new_tweets)

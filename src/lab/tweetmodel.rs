@@ -1,12 +1,12 @@
 use super::schema::tweets;
 use diesel::{Insertable, Queryable};
 
-#[derive(Insertable, Debug, Default)]
+#[derive(Queryable, Insertable, Debug, Default)]
 #[table_name = "tweets"]
-pub struct NewTweet<'a> {
+pub struct NewTweet {
     pub tweet_id: String,
-    pub user_id: &'a str,
-    pub text: &'a str,
+    pub user_id: Option<String>,
+    pub text: String,
     pub followers_count: i32,
     pub retweet_count: i32,
     pub favorite_count: i32,
