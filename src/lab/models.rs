@@ -1,4 +1,4 @@
-use super::schema::{tweets, users};
+use super::schema::users;
 use crate::actor::actor::*;
 use diesel::{Insertable, Queryable};
 #[derive(Queryable, Clone)]

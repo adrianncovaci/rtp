@@ -1,8 +1,5 @@
 use super::models::*;
-use super::sink::*;
-use super::utils::{create_tweet, create_user};
 use crate::actor::actor::*;
-use crate::actor::addr::*;
 use crate::actor::context::*;
 use crate::lab::messages::*;
 use diesel::PgConnection;
@@ -17,7 +14,7 @@ pub struct TweetAggregator {
 impl Actor for TweetAggregator {}
 #[async_trait::async_trait]
 impl Handler<TweetDetails> for TweetAggregator {
-    async fn handle(&mut self, ctx: &mut Context<Self>, mut msg: TweetDetails) {
+    async fn handle(&mut self, _ctx: &mut Context<Self>, msg: TweetDetails) {
         let user_id = Uuid::new_v4();
         let user = User {
             id: user_id.to_string(),

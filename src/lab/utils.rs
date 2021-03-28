@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use std::env;
 
 pub fn get_message_from_chunk(bytes: Bytes) -> TweetMessage {
-    let mut data_response = String::from_utf8(bytes.to_vec()).unwrap();
+    let data_response = String::from_utf8(bytes.to_vec()).unwrap();
     let mut data = data_response.clone();
     let mut data_name = data_response.clone();
     let mut data_followers = data_response.clone();
@@ -117,13 +117,16 @@ pub fn create_tweet(conn: &PgConnection, tweets_array: &Vec<TweetDetails>) {
         let sent_score = sent_score;
         new_tweet.sentiment_score = sent_score;
         new_tweet.user_id = Some(tweet.user_id.clone());
-        let result = users
-            .filter(user_id.eq(new_tweet.user_id.clone().unwrap()))
-            .limit(1)
-            .load::<User>(conn)
-            .expect("Error querying tweets");
-        if result.len() != 0 {
-            new_tweets.push(new_tweet);
+        'fk_pass: loop {
+            let result = users
+                .filter(user_id.eq(new_tweet.clone().user_id.clone().unwrap()))
+                .limit(1)
+                .load::<User>(conn)
+                .expect("Error querying tweets");
+            if result.len() != 0 {
+                new_tweets.push(new_tweet);
+                break 'fk_pass;
+            }
         }
     }
     diesel::insert_into(tweets::table)

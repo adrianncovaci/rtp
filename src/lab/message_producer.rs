@@ -1,5 +1,3 @@
-use std::time::{Duration, SystemTime};
-
 use super::messages::{AddWorker, RemoveWorker, SubscribeToProducer};
 use super::{
     actor_spawner::ActorSpawner,
@@ -12,6 +10,7 @@ use crate::actor::addr::Addr;
 pub use crate::actor::caller::{Caller, Sender};
 use crate::actor::context::Context;
 use crate::Result;
+use std::time::{Duration, SystemTime};
 
 pub struct MessageProducer {
     subscribers: Vec<Sender<TweetMessage>>,
@@ -36,7 +35,7 @@ impl Actor for MessageProducer {
 }
 #[async_trait::async_trait]
 impl Handler<SubscribeToProducer> for MessageProducer {
-    async fn handle(&mut self, ctx: &mut Context<Self>, msg: SubscribeToProducer) {
+    async fn handle(&mut self, _ctx: &mut Context<Self>, msg: SubscribeToProducer) {
         self.subscribers.push(msg.sender);
     }
 }
@@ -49,7 +48,7 @@ impl Message for HandleMessages {
 }
 #[async_trait::async_trait]
 impl Handler<HandleMessages> for MessageProducer {
-    async fn handle(&mut self, ctx: &mut Context<Self>, msg: HandleMessages) {
+    async fn handle(&mut self, _ctx: &mut Context<Self>, _msg: HandleMessages) {
         let mut res = reqwest::get(format!("http://localhost:4000/tweets/{}", self.addr).as_str())
             .await
             .unwrap();
@@ -87,7 +86,7 @@ impl Handler<HandleMessages> for MessageProducer {
 }
 #[async_trait::async_trait]
 impl Handler<RegisterProducer> for MessageProducer {
-    async fn handle(&mut self, ctx: &mut Context<Self>, msg: RegisterProducer) {
+    async fn handle(&mut self, _ctx: &mut Context<Self>, msg: RegisterProducer) {
         self.spawner_addr = Some(msg.0.clone());
     }
 }

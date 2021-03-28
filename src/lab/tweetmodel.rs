@@ -1,7 +1,7 @@
 use super::schema::tweets;
 use diesel::{Insertable, Queryable};
 
-#[derive(Queryable, Insertable, Debug, Default)]
+#[derive(Queryable, Insertable, Debug, Default, Clone)]
 #[table_name = "tweets"]
 pub struct NewTweet {
     pub tweet_id: String,

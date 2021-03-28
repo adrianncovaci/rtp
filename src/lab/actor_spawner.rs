@@ -11,6 +11,7 @@ use crate::actor::context::Context;
 use crate::actor::supervisor::Supervisor;
 use crate::Result;
 
+#[allow(dead_code)]
 pub struct ActorSpawner {
     childs: Vec<Addr<LeActeur>>,
     msg_producer: Addr<MessageProducer>,
@@ -101,7 +102,7 @@ impl Handler<RemoveWorker> for ActorSpawner {
 
 #[async_trait::async_trait]
 impl Handler<AddWorker> for ActorSpawner {
-    async fn handle(&mut self, ctx: &mut Context<Self>, msg: AddWorker) {
+    async fn handle(&mut self, _ctx: &mut Context<Self>, _msg: AddWorker) {
         let msg_producer = self.msg_producer.clone();
         let aggregator = self.tweet_aggregator.clone();
         let dict_map = get_emotions_sets().await;

@@ -1,4 +1,3 @@
-#[macro_use]
 use super::actor_spawner::ActorSpawner;
 use super::models::User;
 use crate::actor::actor::Message;
